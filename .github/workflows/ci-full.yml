@@ -1,0 +1,96 @@
+name: Consolidated CI — Build, CodeQL, Sonar
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: Build / Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test -- --run
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-artifacts
+          path: |
+            ./**/coverage
+            ./**/test-results.xml
+
+  codeql:
+    name: CodeQL Analysis
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          # CodeQL analyzes JavaScript/TypeScript in this repo
+          languages: javascript
+
+      - name: Autobuild (CodeQL)
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+
+  sonar:
+    name: Sonar Scan
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: SonarQube Scan (self-hosted)
+        if: ${{ secrets.SONAR_HOST_URL != '' && secrets.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarCloud Scan (SonarCloud)
+        if: ${{ secrets.SONAR_ORGANIZATION != '' && secrets.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          organization: ${{ secrets.SONAR_ORGANIZATION }}
+          projectKey: ${{ secrets.SONAR_PROJECT_KEY }}
+          token: ${{ secrets.SONAR_TOKEN }}
+
+# Notes:
+# - Set secrets for SonarCloud mode: SONAR_TOKEN, SONAR_ORGANIZATION, SONAR_PROJECT_KEY
+# - Set secrets for SonarQube mode: SONAR_TOKEN, SONAR_HOST_URL
+# - Both CodeQL and Sonar scans depend on the `build` job so you can see results
+#   grouped under this single workflow in the Actions tab.
