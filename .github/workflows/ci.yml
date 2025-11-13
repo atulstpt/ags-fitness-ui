@@ -30,8 +30,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run tests
-        run: npm test -- --run
+      - name: Run tests with coverage
+        run: npm test -- --run --coverage
 
       - name: Upload test artifacts
         if: always()
@@ -39,8 +39,8 @@ jobs:
         with:
           name: test-artifacts
           path: |
-            ./**/coverage
-            ./**/test-results.xml
+            coverage
+            test-results.xml
 
   codeql:
     name: CodeQL Analysis
