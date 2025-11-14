@@ -5,6 +5,7 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
   init:
     name: Init
@@ -52,11 +53,20 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: SonarQube Scan
-        # if: ${{ secrets.SONAR_TOKEN }}
+      - name: SonarQube Scan (host)
+        if: ${{ secrets.SONAR_TOKEN && secrets.SONAR_HOST_URL }}
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarQube Scan (organization)
+        if: ${{ secrets.SONAR_TOKEN && secrets.SONAR_ORGANIZATION }}
+        uses: SonarSource/sonarqube-scan-action@v6
+        with:
+          organization: ${{ secrets.SONAR_ORGANIZATION }}
+          projectKey: ${{ secrets.SONAR_PROJECT_KEY }}
+          token: ${{ secrets.SONAR_TOKEN }}
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
