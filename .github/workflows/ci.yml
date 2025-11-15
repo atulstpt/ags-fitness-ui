@@ -1,10 +1,16 @@
 name: Build
+
 on:
   push:
     branches:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+
+# Global permissions for all jobs (required for CodeQL)
+permissions:
+  contents: read
+  security-events: write
 
 jobs:
   init:
@@ -32,6 +38,9 @@ jobs:
     name: Build and Scan
     needs: init
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # Explicit for CodeQL on this job
     steps:
       - name: Checkout
         uses: actions/checkout@v4
